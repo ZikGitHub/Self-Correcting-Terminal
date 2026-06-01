@@ -1,0 +1,10 @@
+rich
+typer
+python-dotenv
+langchain
+langchain-google-genai
+langchain-ollama
+psutil
+fastapi
+uvicorn
+python-multipart
