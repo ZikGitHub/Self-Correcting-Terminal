@@ -1,0 +1,77 @@
+[
+  {
+    "command": "git init -y",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \nerror: unknown switch `y'\nusage: git init [-q | --quiet] [--bare] [--template=<template-directory>]\n                [--separate-git-dir <git-dir>] [--object-format=<format>]\n                [--ref-format=<format>]\n                [-b <branch-name> | --initial-branch=<branch-name>]\n                [--shared[=<permissions>]] [<directory>]\n\n    --[no-]template <template-directory>\n                          directory from which templates will be used\n    --[no-]bare           create a bare repository\n    --shared[=<permissions>]\n                          specify that the git repository is to be shared amongst several users\n    -q, --[no-]quiet      be quiet\n    --[no-]separate-git-dir <gitdir>\n                          separate git dir from working tree\n    -b, --[no-]initial-branch <name>\n                          override the name of the initial branch\n    --[no-]object-format <hash>\n                          specify the hash algorithm to use\n    --[no-]ref-format <format>\n                          specify the reference format to use\n\n",
+    "success": false
+  },
+  {
+    "command": "git init",
+    "output": "Reinitialized existing Git repository in E:/AIML/GoogleAntigravity_proj/Self-Correcting/Self-Correcting Terminal/.git/\n___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \n",
+    "success": true
+  },
+  {
+    "command": "npm create vite@latest my-app --template react",
+    "output": "\n> npx\n> create-vite my-app react\n\n\u00e2\u201d\u201a\n\u00e2\u2014\u2021  Scaffolding project in E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app...\n\u00e2\u201d\u201a\n\u00e2\u201d\u201d  Done. Now run:\n\n  cd my-app\n  npm install\n  npm run dev\n\n___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \nnpm warn \"react\" is being parsed as a normal command line argument.\nnpm warn Unknown cli config \"--template\". This will stop working in the next major version of npm.\n",
+    "success": true
+  },
+  {
+    "command": "cd my-app",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \n",
+    "success": true
+  },
+  {
+    "command": "npm install tailwindcss postcss autoprefixer",
+    "output": "\nadded 27 packages, and audited 28 packages in 27s\n\n13 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \n",
+    "success": true
+  },
+  {
+    "command": "npx tailwindcss init -p",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \nnpm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\zisha\\AppData\\Local\\npm-cache\\_logs\\2026-06-02T09_24_34_459Z-debug-0.log\n",
+    "success": false
+  },
+  {
+    "command": "npm install -g tailwindcss",
+    "output": "\nchanged 1 package in 769ms\n___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \n",
+    "success": true
+  },
+  {
+    "command": "tailwindcss init -p",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \n'tailwindcss' is not recognized as an internal or external command,\noperable program or batch file.\n",
+    "success": false
+  },
+  {
+    "command": "npm install tailwindcss postcss autoprefixer",
+    "output": "\nup to date, audited 28 packages in 1s\n\n13 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \n",
+    "success": true
+  },
+  {
+    "command": "npx tailwindcss init -p",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \nnpm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\zisha\\AppData\\Local\\npm-cache\\_logs\\2026-06-02T09_25_04_127Z-debug-0.log\n",
+    "success": false
+  },
+  {
+    "command": "npm config set prefix %APPDATA%\\npm",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \n",
+    "success": true
+  },
+  {
+    "command": "npx tailwindcss init -p",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \nnpm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\zisha\\AppData\\Local\\npm-cache\\_logs\\2026-06-02T09_25_15_568Z-debug-0.log\n",
+    "success": false
+  },
+  {
+    "command": "npm install tailwindcss postcss autoprefixer",
+    "output": "\nup to date, audited 28 packages in 1s\n\n13 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \n",
+    "success": true
+  },
+  {
+    "command": "npx tailwindcss init -p",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\my-app \nnpm error could not determine executable to run\nnpm error A complete log of this run can be found in: C:\\Users\\zisha\\AppData\\Local\\npm-cache\\_logs\\2026-06-02T09_25_29_145Z-debug-0.log\n",
+    "success": false
+  },
+  {
+    "command": "mkdir new_folder",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \n",
+    "success": true
+  }
+]

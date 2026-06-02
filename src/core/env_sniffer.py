@@ -51,7 +51,7 @@ class EnvSniffer:
         installed_tools = []
         
         for tool in tools_to_check:
-            if shutil.who(tool):
+            if shutil.which(tool):
                 installed_tools.append(tool)
         
         return {"installed_tools": installed_tools}
