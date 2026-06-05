@@ -1,0 +1,10 @@
+venv
+.venv
+__pycache__
+*.pyc
+.git
+.env
+rag_data
+.agent_history.json
+workspace
+.pytest_cache

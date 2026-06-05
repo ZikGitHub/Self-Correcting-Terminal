@@ -113,5 +113,10 @@
     "command": "echo fast.txt > speed_test/fast.txt",
     "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\workspace \n",
     "success": true
+  },
+  {
+    "command": "mkdir workspaces",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting \n",
+    "success": true
   }
 ]
