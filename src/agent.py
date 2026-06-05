@@ -1,4 +1,8 @@
 import os
+import queue
+import threading
+import time
+import re
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from src.core.env_sniffer import EnvSniffer
@@ -46,9 +50,10 @@ class TerminalAgent:
 
     def run_generator(self, task: str, cwd: str = None, max_retries: int = 3, verbose: bool = False):
         if cwd:
-            self.executor.cwd = cwd
+            self.executor.cwd = os.path.abspath(cwd)
         
-        if verbose: yield {"type": "debug", "message": f"Initializing in {os.getcwd()}"}
+        effective_cwd = self.executor.cwd
+        if verbose: yield {"type": "debug", "message": f"Initializing in {effective_cwd}"}
         
         # 1. Heuristic Scope Check
         is_safe, reason = SafetyGuard.is_within_scope(task)
@@ -56,116 +61,115 @@ class TerminalAgent:
             yield {"type": "error", "message": f"Task blocked: {reason}"}
             return
 
-        yield {"type": "status", "message": f"Sniffing environment..."}
-        sys_context = self.sniffer.get_summary_prompt()
+        yield {"type": "status", "message": f"Sniffing environment in {effective_cwd}..."}
+        sys_context = self.sniffer.get_summary_prompt(cwd=effective_cwd)
         if verbose: yield {"type": "debug", "message": sys_context}
         yield {"type": "success", "message": "Environment detected."}
         
         yield {"type": "status", "message": f"Planning task: {task}"}
-        plan = self.planner.generate_plan(task, sys_context, history=self.history)
         
-        # 2. LLM Scope Check
-        if plan.get("out_of_scope"):
-            yield {"type": "error", "message": f"Task refused by Planner: {plan.get('refusal_reason')}"}
-            return
-
-        commands = plan.get("commands", [])
-        yield {"type": "info", "message": f"Strategy: {plan.get('explanation')}"}
+        # AGGRESSIVE STREAMING: We use a queue to decouple planning from execution
+        command_q = queue.Queue()
+        planning_done = threading.Event()
         
-        import queue
-        import threading
+        def plan_producer():
+            try:
+                for event in self.planner.stream_plan(task, sys_context, history=self.history):
+                    command_q.put(event)
+            finally:
+                planning_done.set()
 
-        i = 0
-        retry_counts = {} # Track retries per command string
-        while i < len(commands):
-            cmd = commands[i]
-            
-            # 3. Command Safety Check
-            if SafetyGuard.is_strictly_forbidden(cmd):
-                yield {"type": "error", "message": f"Command hard-blocked by SafetyGuard: {cmd}"}
-                break
-            
-            if SafetyGuard.requires_confirmation(cmd):
-                yield {"type": "confirmation", "message": f"Potentially destructive command: {cmd}\nDo you want to proceed? (y/n)"}
-                self.waiting_for_confirmation = True
-                self.confirmation_response = None
+        plan_thread = threading.Thread(target=plan_producer)
+        plan_thread.start()
+
+        retry_counts = {}
+        
+        while not planning_done.is_set() or not command_q.empty():
+            try:
+                event = command_q.get(timeout=0.1)
+                etype = event["type"]
                 
-                # Wait for user response via 'respond' method
-                while self.confirmation_response is None:
-                    import time
-                    time.sleep(0.5)
-                
-                response = self.confirmation_response.lower().strip()
-                self.waiting_for_confirmation = False
-                self.confirmation_response = None
-                
-                if response != 'y':
-                    yield {"type": "info", "message": "Command cancelled by user."}
-                    break
-
-            yield {"type": "command", "message": cmd}
-            
-            output_q = queue.Queue()
-            def on_output(line, stream):
-                if any(p in line for p in ["[y/n]", "(y/n)", "[Y/n]", "[y/N]"]):
-                    output_q.put({"type": "prompt", "message": line.strip()})
-                elif line.strip():
-                    output_q.put({"type": "output", "message": line.strip()})
-
-            def run_exec():
-                res = self.executor.execute(cmd, on_output=on_output)
-                output_q.put({"type": "result", "result": res})
-
-            exec_thread = threading.Thread(target=run_exec)
-            exec_thread.start()
-
-            result = None
-            while True:
-                try:
-                    event = output_q.get(timeout=0.1)
-                    if event["type"] == "result":
-                        result = event["result"]
-                        break
+                if etype == "info":
                     yield event
-                except queue.Empty:
-                    if not exec_thread.is_alive():
-                        # Check one last time for anything left in the queue
-                        while not output_q.empty():
-                            event = output_q.get()
-                            if event["type"] == "result":
-                                result = event["result"]
-                                break
-                            yield event
+                    continue
+                
+                if etype == "command":
+                    cmd = event["message"]
+                    
+                    # 3. Command Safety Check
+                    if SafetyGuard.is_strictly_forbidden(cmd):
+                        yield {"type": "error", "message": f"Command hard-blocked: {cmd}"}
                         break
-            
-            # Update history
-            self.history.append({
-                "command": cmd,
-                "output": result.stdout + result.stderr,
-                "success": result.success
-            })
+                    
+                    if SafetyGuard.requires_confirmation(cmd):
+                        yield {"type": "confirmation", "message": f"Potentially destructive command: {cmd}\nDo you want to proceed? (y/n)"}
+                        self.waiting_for_confirmation = True
+                        self.confirmation_response = None
+                        while self.confirmation_response is None:
+                            time.sleep(0.1)
+                        response = self.confirmation_response.lower().strip()
+                        self.waiting_for_confirmation = False
+                        self.confirmation_response = None
+                        if response != 'y':
+                            yield {"type": "info", "message": "Command cancelled by user."}
+                            break
 
-            if result.success:
-                yield {"type": "success", "message": f"Completed in {result.duration:.2f}s"}
-                i += 1
-            else:
-                yield {"type": "error", "message": f"Command failed (Exit code: {result.exit_code})"}
-                if verbose: yield {"type": "debug", "message": f"Full STDERR: {result.stderr}"}
-                yield {"type": "error_details", "message": result.stderr.strip()}
-                
-                # Check retry limit
-                retry_counts[cmd] = retry_counts.get(cmd, 0) + 1
-                if retry_counts[cmd] > max_retries:
-                    yield {"type": "error", "message": f"Max retries reached for command: {cmd}"}
-                    break
+                    yield {"type": "command", "message": cmd}
+                    
+                    output_q = queue.Queue()
+                    def on_output(line, stream):
+                        if any(p in line for p in ["[y/n]", "(y/n)", "[Y/n]", "[y/N]"]):
+                            output_q.put({"type": "prompt", "message": line.strip()})
+                        elif line.strip():
+                            output_q.put({"type": "output", "message": line.strip()})
 
-                yield {"type": "status", "message": "Consulting the brain for a fix..."}
-                fix_plan = self.planner.suggest_fix(task, cmd, result.stderr, sys_context, history=self.history)
-                fix_commands = fix_plan.get("commands", [])
+                    def run_exec():
+                        res = self.executor.execute(cmd, on_output=on_output)
+                        output_q.put({"type": "result", "result": res})
+
+                    exec_thread = threading.Thread(target=run_exec)
+                    exec_thread.start()
+
+                    result = None
+                    while True:
+                        try:
+                            exec_event = output_q.get(timeout=0.05)
+                            if exec_event["type"] == "result":
+                                result = exec_event["result"]
+                                break
+                            yield exec_event
+                        except queue.Empty:
+                            if not exec_thread.is_alive():
+                                break
+                    
+                    # Update history
+                    self.history.append({
+                        "command": cmd,
+                        "output": result.stdout + result.stderr,
+                        "success": result.success
+                    })
+
+                    if result.success:
+                        yield {"type": "success", "message": f"Completed in {result.duration:.2f}s"}
+                    else:
+                        yield {"type": "error", "message": f"Command failed (Exit code: {result.exit_code})"}
+                        if verbose: yield {"type": "debug", "message": f"Full STDERR: {result.stderr}"}
+                        yield {"type": "error_details", "message": result.stderr.strip()}
+                        
+                        retry_counts[cmd] = retry_counts.get(cmd, 0) + 1
+                        if retry_counts[cmd] > max_retries:
+                            yield {"type": "error", "message": f"Max retries reached for: {cmd}"}
+                            break
+
+                        yield {"type": "status", "message": "Consulting brain for fix..."}
+                        # For fixes, we still use the synchronous suggest_fix for now
+                        fix_plan = self.planner.suggest_fix(task, cmd, result.stderr, sys_context, history=self.history)
+                        for fix_cmd in fix_plan.get("commands", []):
+                            command_q.put({"type": "command", "message": fix_cmd})
+                        command_q.put({"type": "command", "message": cmd}) # Retry the original command
                 
-                yield {"type": "info", "message": f"Adjustment: {fix_plan.get('explanation')}"}
-                
-                commands[i:i+1] = fix_commands + [cmd]
+            except queue.Empty:
+                continue
         
         self.save_history()
         yield {"type": "done", "message": "Task completed successfully!"}

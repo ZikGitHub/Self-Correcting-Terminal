@@ -3,23 +3,41 @@ import sys
 import os
 import shutil
 import subprocess
-from typing import Dict, List, Any
+import time
+from typing import Dict, List, Any, Optional
 
 class EnvSniffer:
     """
     Sniffs the current environment to provide context to the LLM agent.
     Detects OS, Shell, Python version, and installed tools.
+    Includes caching for performance.
     """
 
     def __init__(self):
         self.context = {}
+        self._cache = None
+        self._cache_time = 0
+        self._cache_cwd = None
+        self._ttl = 300 # 5 minutes
 
-    def sniff_all(self) -> Dict[str, Any]:
-        """Runs all sniffing methods and returns the combined context."""
+    def sniff_all(self, force: bool = False) -> Dict[str, Any]:
+        """Runs all sniffing methods and returns the combined context with caching."""
+        current_cwd = os.getcwd()
+        now = time.time()
+
+        if not force and self._cache and (now - self._cache_time < self._ttl) and (self._cache_cwd == current_cwd):
+            return self._cache
+
+        self.context = {}
         self.context.update(self._sniff_os())
         self.context.update(self._sniff_python())
         self.context.update(self._sniff_shell())
         self.context.update(self._sniff_tools())
+        
+        self._cache = self.context.copy()
+        self._cache_time = now
+        self._cache_cwd = current_cwd
+        
         return self.context
 
     def _sniff_os(self) -> Dict[str, str]:
@@ -56,15 +74,16 @@ class EnvSniffer:
         
         return {"installed_tools": installed_tools}
 
-    def get_summary_prompt(self) -> str:
+    def get_summary_prompt(self, cwd: Optional[str] = None) -> str:
         """Returns a string formatted for an LLM system prompt."""
         ctx = self.sniff_all()
+        current_dir = cwd or ctx['cwd']
         summary = (
             f"SYSTEM CONTEXT:\n"
             f"- OS: {ctx['os']} ({ctx['os_release']})\n"
             f"- Shell: {ctx['shell']}\n"
             f"- Python: {ctx['python_version']} (Venv: {ctx['is_venv']})\n"
-            f"- Current Directory: {ctx['cwd']}\n"
+            f"- Current Directory: {current_dir}\n"
             f"- Installed Tools: {', '.join(ctx['installed_tools'])}\n"
         )
         return summary

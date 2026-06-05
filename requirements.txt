@@ -8,3 +8,10 @@ psutil
 fastapi
 uvicorn
 python-multipart
+chromadb
+langchain-community
+langchain-chroma
+sentence-transformers
+beautifulsoup4
+requests
+markdown

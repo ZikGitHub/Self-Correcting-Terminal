@@ -22,7 +22,14 @@ class CommandExecutor:
     """
 
     def __init__(self, cwd: Optional[str] = None):
-        self.cwd = cwd or os.getcwd()
+        # Default to a dedicated 'workspace' directory in the project root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        default_workspace = os.path.join(project_root, "workspace")
+        
+        if not os.path.exists(default_workspace):
+            os.makedirs(default_workspace)
+            
+        self.cwd = os.path.abspath(cwd) if cwd else default_workspace
 
     def _get_env_with_venv(self) -> Dict[str, str]:
         """

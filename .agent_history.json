@@ -73,5 +73,45 @@
     "command": "mkdir new_folder",
     "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \n",
     "success": true
+  },
+  {
+    "command": "mkdir output",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \n",
+    "success": true
+  },
+  {
+    "command": "mkdir output\\output2",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \n",
+    "success": true
+  },
+  {
+    "command": "mkdir output\\output3",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal \n",
+    "success": true
+  },
+  {
+    "command": "mkdir output",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\workspace \n",
+    "success": true
+  },
+  {
+    "command": "mkdir output\\output2",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\workspace \n",
+    "success": true
+  },
+  {
+    "command": "mkdir output\\output3",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\workspace \n",
+    "success": true
+  },
+  {
+    "command": "mkdir speed_test",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\workspace \n",
+    "success": true
+  },
+  {
+    "command": "echo fast.txt > speed_test/fast.txt",
+    "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\workspace \n",
+    "success": true
   }
 ]
