@@ -105,8 +105,8 @@ class Planner:
             commands_match = re.search(r'"commands":\s*\[(.*?)\]', full_text, re.DOTALL)
             if commands_match:
                 cmd_section = commands_match.group(1)
-                # Find all quoted strings in this section
-                found_cmds = re.findall(r'"(.*?)"', cmd_section)
+                # Find all quoted strings in this section, handling escaped quotes
+                found_cmds = re.findall(r'"((?:[^"\\]|\\.)*)"', cmd_section)
                 for cmd in found_cmds:
                     if cmd not in yielded_commands:
                         yielded_commands.append(cmd)

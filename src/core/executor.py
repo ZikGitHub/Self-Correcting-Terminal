@@ -63,7 +63,7 @@ class CommandExecutor:
         """
         start_time = time.time()
         
-        marker = "___CWD_MARKER___"
+        marker = "___AGENT_CWD_MARKER_XYZ___"
         if os.name == "nt":
             # Use delayed expansion (!VAR!) to get values after command execution.
             # We wrap the command in parentheses to ensure & applies to the whole thing.
@@ -97,24 +97,38 @@ class CommandExecutor:
                         break
                     
                     buffer += char
-                    capture_list.append(char)
                     
                     # Call on_output if we have a newline or a likely prompt
                     if char == '\n' or any(p in buffer for p in ["[y/n]", "(y/n)", "[Y/n]", "[y/N]", "? "]):
                         if marker in buffer:
+                            # We found our special marker
                             parts = buffer.split(marker)
-                            if parts[0].strip():
+                            # The part before the marker is actual command output
+                            if parts[0]:
                                 capture_list.append(parts[0])
                                 if on_output: on_output(parts[0], stream_name)
+                            # The part after the marker is the new CWD
                             if len(parts) > 1:
                                 new_cwd[0] = parts[1].strip()
                         else:
+                            # Normal output line
+                            capture_list.append(buffer)
                             if on_output:
                                 on_output(buffer, stream_name)
                         buffer = ""
                 
-                if buffer and on_output:
-                    on_output(buffer, stream_name)
+                # Handle remaining buffer (no trailing newline)
+                if buffer:
+                    if marker in buffer:
+                        parts = buffer.split(marker)
+                        if parts[0]:
+                            capture_list.append(parts[0])
+                            if on_output: on_output(parts[0], stream_name)
+                        if len(parts) > 1:
+                            new_cwd[0] = parts[1].strip()
+                    else:
+                        capture_list.append(buffer)
+                        if on_output: on_output(buffer, stream_name)
                 stream.close()
 
             import threading

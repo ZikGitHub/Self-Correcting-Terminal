@@ -28,18 +28,29 @@ async def run_task(request: Request):
         return {"error": "No task provided"}
 
     async def event_generator():
-        # run_generator is a synchronous generator, we wrap it in a thread or just run it
-        # Since it's blocking, we run it in a thread to keep the event loop free
-        loop = asyncio.get_event_loop()
+        q = asyncio.Queue()
+        loop = asyncio.get_running_loop()
         
-        def get_events():
-            return agent.run_generator(task, cwd=cwd)
-            
-        events = await loop.run_in_executor(None, get_events)
+        def run_agent():
+            try:
+                # Consume the generator in this worker thread
+                for event in agent.run_generator(task, cwd=cwd):
+                    loop.call_soon_threadsafe(q.put_nowait, event)
+            except Exception as e:
+                loop.call_soon_threadsafe(q.put_nowait, {"type": "error", "message": str(e)})
+            finally:
+                loop.call_soon_threadsafe(q.put_nowait, None) # Sentinel to close stream
         
-        for event in events:
+        # Run agent in a background thread to avoid blocking the event loop
+        import threading
+        threading.Thread(target=run_agent, daemon=True).start()
+        
+        while True:
+            event = await q.get()
+            if event is None:
+                break
             yield f"data: {json.dumps(event)}\n\n"
-            await asyncio.sleep(0.1) # Small delay for UI smoothness
+            await asyncio.sleep(0.01) # Tiny sleep to yield control
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

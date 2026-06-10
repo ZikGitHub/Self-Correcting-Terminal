@@ -9,13 +9,14 @@ from rich.box import DOUBLE_EDGE
 console = Console()
 
 def print_banner():
-    banner = Text(
-        "╔══════════════════════════════════════════════════════════════╗\n"
-        "║           SELF-CORRECTING TERMINAL AGENT v1.0              ║\n"
-        "╚══════════════════════════════════════════════════════════════╝",
-        style="bold green"
-    )
-    console.print(Panel(banner, border_style="green", box=DOUBLE_EDGE, expand=False))
+    banner_text = Text("SELF-CORRECTING TERMINAL AGENT v1.0", style="bold green", justify="center")
+    console.print(Panel(
+        banner_text,
+        border_style="green",
+        box=DOUBLE_EDGE,
+        expand=False,
+        padding=(1, 4)
+    ))
 
 def print_step(message: str, style: str = "bold cyan"):
     console.print(f"[bold white]>[/] [{style}]{message}[/]")
