@@ -76,6 +76,8 @@ class TerminalAgent:
             try:
                 for event in self.planner.stream_plan(task, sys_context, history=self.history):
                     command_q.put(event)
+            except Exception as e:
+                command_q.put({"type": "error", "message": f"Planner Error: {str(e)}"})
             finally:
                 planning_done.set()
 
@@ -83,6 +85,8 @@ class TerminalAgent:
         plan_thread.start()
 
         retry_counts = {}
+        task_success = True
+        commands_executed = 0
         
         while not planning_done.is_set() or not command_q.empty():
             try:
@@ -93,12 +97,19 @@ class TerminalAgent:
                     yield event
                     continue
                 
+                if etype == "error":
+                    yield event
+                    task_success = False
+                    break
+                
                 if etype == "command":
                     cmd = event["message"]
+                    commands_executed += 1
                     
                     # 3. Command Safety Check
                     if SafetyGuard.is_strictly_forbidden(cmd):
                         yield {"type": "error", "message": f"Command hard-blocked: {cmd}"}
+                        task_success = False
                         break
                     
                     if SafetyGuard.requires_confirmation(cmd):
@@ -112,6 +123,7 @@ class TerminalAgent:
                         self.confirmation_response = None
                         if response != 'y':
                             yield {"type": "info", "message": "Command cancelled by user."}
+                            task_success = False
                             break
 
                     yield {"type": "command", "message": cmd}
@@ -145,16 +157,19 @@ class TerminalAgent:
                     # Update history
                     self.history.append({
                         "command": cmd,
-                        "output": result.stdout + result.stderr,
-                        "success": result.success
+                        "output": (result.stdout + result.stderr) if result else "No output",
+                        "success": result.success if result else False
                     })
 
-                    if result.success:
+                    if result and result.success:
                         yield {"type": "success", "message": f"Completed in {result.duration:.2f}s"}
                     else:
-                        yield {"type": "error", "message": f"Command failed (Exit code: {result.exit_code})"}
-                        if verbose: yield {"type": "debug", "message": f"Full STDERR: {result.stderr}"}
-                        yield {"type": "error_details", "message": result.stderr.strip()}
+                        task_success = False
+                        exit_code = result.exit_code if result else "Unknown"
+                        stderr = result.stderr if result else "Unknown error"
+                        yield {"type": "error", "message": f"Command failed (Exit code: {exit_code})"}
+                        if verbose: yield {"type": "debug", "message": f"Full STDERR: {stderr}"}
+                        yield {"type": "error_details", "message": stderr.strip()}
                         
                         retry_counts[cmd] = retry_counts.get(cmd, 0) + 1
                         if retry_counts[cmd] > max_retries:
@@ -162,17 +177,26 @@ class TerminalAgent:
                             break
 
                         yield {"type": "status", "message": "Consulting brain for fix..."}
-                        # For fixes, we still use the synchronous suggest_fix for now
-                        fix_plan = self.planner.suggest_fix(task, cmd, result.stderr, sys_context, history=self.history)
-                        for fix_cmd in fix_plan.get("commands", []):
-                            command_q.put({"type": "command", "message": fix_cmd})
-                        command_q.put({"type": "command", "message": cmd}) # Retry the original command
+                        try:
+                            fix_plan = self.planner.suggest_fix(task, cmd, stderr, sys_context, history=self.history)
+                            for fix_cmd in fix_plan.get("commands", []):
+                                command_q.put({"type": "command", "message": fix_cmd})
+                            command_q.put({"type": "command", "message": cmd}) # Retry the original command
+                            task_success = True # Reset for retry
+                        except Exception as e:
+                            yield {"type": "error", "message": f"Fix suggestion failed: {str(e)}"}
+                            break
                 
             except queue.Empty:
                 continue
         
         self.save_history()
-        yield {"type": "done", "message": "Task completed successfully!"}
+        if task_success and commands_executed > 0:
+            yield {"type": "done", "message": "Task completed successfully!"}
+        elif task_success and commands_executed == 0:
+            yield {"type": "done", "message": "Task analyzed. No commands needed."}
+        else:
+            yield {"type": "done", "message": "Task finished with errors."}
 
     def run(self, task: str, verbose: bool = False):
         """Legacy run method for CLI compatibility."""

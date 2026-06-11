@@ -37,6 +37,8 @@ async def run_task(request: Request):
                 for event in agent.run_generator(task, cwd=cwd):
                     loop.call_soon_threadsafe(q.put_nowait, event)
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 loop.call_soon_threadsafe(q.put_nowait, {"type": "error", "message": str(e)})
             finally:
                 loop.call_soon_threadsafe(q.put_nowait, None) # Sentinel to close stream
@@ -53,6 +55,15 @@ async def run_task(request: Request):
             await asyncio.sleep(0.01) # Tiny sleep to yield control
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.post("/respond")
+async def respond(request: Request):
+    data = await request.json()
+    text = data.get("text")
+    if text is not None:
+        agent.respond(text)
+        return {"status": "ok"}
+    return {"error": "No text provided"}
 
 from pydantic import BaseModel
 import sys

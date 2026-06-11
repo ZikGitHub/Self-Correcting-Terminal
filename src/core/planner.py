@@ -30,6 +30,12 @@ class Planner:
         self.model_name = os.getenv("PLANNER_MODEL", "qwen2.5-coder:7b")
         self.ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 
+        # Automatic Host Discovery: If we're in Docker and using 127.0.0.1, it's likely wrong.
+        if self.ollama_host in ["http://127.0.0.1:11434", "http://localhost:11434"]:
+            if os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER'):
+                print("[*] Docker detected. Switching OLLAMA_HOST to host.docker.internal")
+                self.ollama_host = "http://host.docker.internal:11434"
+
         if self.model_type == "ollama":
             self.llm = ChatOllama(model=self.model_name, base_url=self.ollama_host)
         else:
@@ -45,8 +51,8 @@ class Planner:
 
     def stream_plan(self, task: str, sys_context: str, history: List[Dict[str, Any]] = None):
         """
-        Streams the LLM response and yields partial CommandPlan objects
-        or individual commands as they are discovered.
+        Streams the LLM response and yields partial CommandPlan objects.
+        Now more robust and includes fallback to full generation.
         """
         history_str = ""
         if history:
@@ -60,12 +66,12 @@ class Planner:
         if self.rag:
             rag_context = "\nPOWERSHELL REFERENCE CONTEXT:\n" + self.rag.search(task)
 
-        prompt = ChatPromptTemplate.from_template(
+        prompt_text = (
             "You are an expert terminal agent. Your goal is to provide ONLY valid shell commands within your EXPERTISE SCOPE.\n"
-            "{sys_context}\n"
-            "{history_str}\n"
-            "{rag_context}\n"
-            "TASK: {task}\n"
+            f"{sys_context}\n"
+            f"{history_str}\n"
+            f"{rag_context}\n"
+            f"TASK: {task}\n"
             "\n"
             "EXPERTISE SCOPE:\n"
             "- Local file management (create, read, update, delete in project directories).\n"
@@ -83,40 +89,85 @@ class Planner:
             "2. EVERY string in the 'commands' list MUST be a valid, executable shell command.\n"
             "3. Use non-interactive flags for EVERYTHING: 'npm init -y', 'npx -y', 'pip install -y'.\n"
             "4. Ensure commands are compatible with the detected OS and Shell.\n"
-            "Return the plan as a structured JSON object."
+            "Return the plan as a structured JSON object with keys: 'commands' (list), 'explanation' (string), 'out_of_scope' (bool), and 'refusal_reason' (string or null)."
         )
 
         full_text = ""
-        yielded_commands = []
+        yielded_commands = set()
+        explanation_yielded = False
+        out_of_scope_yielded = False
         
-        # We use the raw LLM for streaming because structured_output usually waits for completion
-        for chunk in self.llm.stream(prompt.format(
-            task=task, 
-            sys_context=sys_context,
-            history_str=history_str,
-            rag_context=rag_context
-        )):
-            content = chunk.content if hasattr(chunk, 'content') else str(chunk)
-            full_text += content
-            
-            # Simple regex to find strings inside the "commands": [...] array
-            # This is a heuristic for "aggressive streaming"
-            # It looks for strings inside square brackets that haven't been yielded yet
-            commands_match = re.search(r'"commands":\s*\[(.*?)\]', full_text, re.DOTALL)
-            if commands_match:
-                cmd_section = commands_match.group(1)
-                # Find all quoted strings in this section, handling escaped quotes
-                found_cmds = re.findall(r'"((?:[^"\\]|\\.)*)"', cmd_section)
-                for cmd in found_cmds:
-                    if cmd not in yielded_commands:
-                        yielded_commands.append(cmd)
-                        yield {"type": "command", "message": cmd}
-            
-            # Also try to yield the explanation if found early
-            expl_match = re.search(r'"explanation":\s*"(.*?)"', full_text)
-            if expl_match and "explanation_yielded" not in yielded_commands:
-                yielded_commands.append("explanation_yielded")
-                yield {"type": "info", "message": f"Strategy: {expl_match.group(1)}"}
+        try:
+            print(f"[*] Planning with {self.model_type} ({self.model_name}) at {self.ollama_host}...")
+            for chunk in self.llm.stream(prompt_text):
+                content = chunk.content if hasattr(chunk, 'content') else str(chunk)
+                full_text += content
+                
+                # Robustly find explanation
+                if not explanation_yielded:
+                    expl_match = re.search(r'"explanation":\s*"(.*?)"', full_text)
+                    if expl_match:
+                        explanation_yielded = True
+                        yield {"type": "info", "message": f"Strategy: {expl_match.group(1)}"}
+
+                # Robustly find out_of_scope
+                if not out_of_scope_yielded:
+                    scope_match = re.search(r'"out_of_scope":\s*(true|false)', full_text)
+                    if scope_match:
+                        is_out = scope_match.group(1) == "true"
+                        out_of_scope_yielded = True
+                        if is_out:
+                            # Try to find refusal reason
+                            refusal_match = re.search(r'"refusal_reason":\s*"(.*?)"', full_text)
+                            reason = refusal_match.group(1) if refusal_match else "Task is out of scope."
+                            yield {"type": "error", "message": f"Out of Scope: {reason}"}
+                            return
+
+                # Aggressive command streaming
+                # Look for the commands array start
+                cmds_start = full_text.find('"commands":')
+                if cmds_start != -1:
+                    cmds_section = full_text[cmds_start:]
+                    # Find all double-quoted strings that look like they are in a list
+                    found_cmds = re.findall(r'"((?:[^"\\]|\\.)*)"', cmds_section)
+                    for cmd in found_cmds:
+                        # Filter out the key "commands" itself and other keys
+                        if cmd in ["commands", "explanation", "out_of_scope", "refusal_reason", "true", "false"]:
+                            continue
+                        if cmd not in yielded_commands:
+                            # Ensure it's not the explanation we already yielded
+                            if explanation_yielded and cmd in full_text[full_text.find('"explanation"'):full_text.find('"', full_text.find('"explanation"')+15)]:
+                                continue
+                            yielded_commands.add(cmd)
+                            yield {"type": "command", "message": cmd}
+        except Exception as e:
+            error_msg = str(e)
+            if "Connection refused" in error_msg or "111" in error_msg:
+                yield {"type": "error", "message": f"Connection Refused: Could not reach Ollama at {self.ollama_host}. Is it running?"}
+                if "127.0.0.1" in self.ollama_host or "localhost" in self.ollama_host:
+                    yield {"type": "info", "message": "HINT: If running in Docker, use OLLAMA_HOST=http://host.docker.internal:11434"}
+            else:
+                yield {"type": "error", "message": f"Planning failed: {error_msg}"}
+            return
+
+        # Final Fallback: Attempt to parse the whole thing as JSON if no commands were yielded
+        if not yielded_commands:
+            try:
+                # Find JSON boundaries
+                start = full_text.find('{')
+                end = full_text.rfind('}') + 1
+                if start != -1 and end != 0:
+                    json_str = full_text[start:end]
+                    data = json.loads(json_str)
+                    if data.get("out_of_scope"):
+                        yield {"type": "error", "message": f"Out of Scope: {data.get('refusal_reason')}"}
+                    elif data.get("commands"):
+                        for cmd in data["commands"]:
+                            if cmd not in yielded_commands:
+                                yielded_commands.add(cmd)
+                                yield {"type": "command", "message": cmd}
+            except:
+                pass
 
     def generate_plan(self, task: str, sys_context: str, history: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Generates a sequence of commands to achieve a goal."""
