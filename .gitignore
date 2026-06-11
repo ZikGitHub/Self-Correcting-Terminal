@@ -13,3 +13,9 @@ workspace/*
 
 .pytest_cache
 .pytest_cache/*
+.agent_history.json
+rag_data/chroma_db/chroma.sqlite3
+rag_data/chroma_db/03708722-83c5-4fca-96e7-b9fb3af99b8c/data_level0.bin
+rag_data/chroma_db/03708722-83c5-4fca-96e7-b9fb3af99b8c/header.bin
+rag_data/chroma_db/03708722-83c5-4fca-96e7-b9fb3af99b8c/length.bin
+rag_data/chroma_db/03708722-83c5-4fca-96e7-b9fb3af99b8c/link_lists.bin

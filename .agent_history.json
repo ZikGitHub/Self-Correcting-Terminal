@@ -118,5 +118,140 @@
     "command": "mkdir workspaces",
     "output": "___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting \n",
     "success": true
+  },
+  {
+    "command": "echo Hello",
+    "output": "Hello\n___CWD_MARKER___E:\\AIML\\GoogleAntigravity_proj\\Self-Correcting\\Self-Correcting Terminal\\workspace \n",
+    "success": true
+  },
+  {
+    "command": "mkdir workspaces\\\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces\\\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces/new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "cd workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces\\\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces/new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "cd workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces\\\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "cd workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces\\\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir E:\\workspaces\\new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "cd E:\\workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "cd workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "cd E:\\workspaces",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
+  },
+  {
+    "command": "mkdir new_folder",
+    "output": "[WinError 267] The directory name is invalid",
+    "success": false
   }
 ]
